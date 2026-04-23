@@ -1,0 +1,27 @@
+services:
+  proxy_guard:
+    image: ubuntu/squid:latest
+    container_name: proxy_guard
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      - default    # For internet access
+      - secure_net # For sandbox access
+
+  claude-sandbox:
+    image: claude-sandbox-image # Your custom image from earlier
+    container_name: claude-sandbox
+    environment:
+      - http_proxy=http://proxy_guard:3128
+      - https_proxy=http://proxy_guard:3128
+      - ANTHROPIC_API_KEY=your-actual-api-key-here
+    volumes:
+      - ./worldrugby-scrm:/workspace/worldrugby-scrm:ro
+    networks:
+      - secure_net # Isolated network
+    stdin_open: true # Keeps the terminal open (-i)
+    tty: true        # Allocates a pseudo-TTY (-t)
+
+networks:
+  secure_net:
+    internal: true # Blocks internet access
