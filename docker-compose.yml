@@ -9,19 +9,36 @@ services:
       - secure_net # For sandbox access
 
   claude-sandbox:
-    image: claude-sandbox-image # Your custom image from earlier
+    image: claude-sandbox-image
     container_name: claude-sandbox
     environment:
       - http_proxy=http://proxy_guard:3128
       - https_proxy=http://proxy_guard:3128
-      - ANTHROPIC_API_KEY=your-actual-api-key-here
+      - no_proxy=localhost,127.0.0.1,0.0.0.0
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
-      - ./worldrugby-scrm:/workspace/worldrugby-scrm:ro
+      - ${TARGET_REPO_ABS}:/workspace/readonly_repo:ro
     networks:
-      - secure_net # Isolated network
-    stdin_open: true # Keeps the terminal open (-i)
-    tty: true        # Allocates a pseudo-TTY (-t)
+      - secure_net
+    stdin_open: true 
+    tty: true        
+    command: >
+      bash -c "cp -a /workspace/readonly_repo /workspace/active_repo &&
+               cd /workspace/active_repo &&
+               code-server --bind-addr 0.0.0.0:8080 --auth none"
+
+  ui_bridge:
+    image: alpine/socat
+    container_name: ui_bridge
+    ports:
+      - "8080:8080"
+    command: tcp-listen:8080,fork,reuseaddr tcp-connect:claude-sandbox:8080
+    networks:
+      - default    # Exposes port 8080 to localhost
+      - secure_net # Routes to the isolated sandbox
+    depends_on:
+      - claude-sandbox
 
 networks:
   secure_net:
-    internal: true # Blocks internet access
+    internal: true # Automatically created by compose, blocks internet access
