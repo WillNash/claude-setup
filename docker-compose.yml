@@ -1,7 +1,6 @@
 services:
   proxy_guard:
     image: ubuntu/squid:latest
-    container_name: proxy_guard
     volumes:
       - ./squid.conf:/etc/squid/squid.conf:ro
     networks:
@@ -10,7 +9,6 @@ services:
 
   claude-sandbox:
     image: claude-sandbox-image
-    container_name: claude-sandbox
     environment:
       - http_proxy=http://proxy_guard:3128
       - https_proxy=http://proxy_guard:3128
@@ -29,12 +27,13 @@ services:
 
   ui_bridge:
     image: alpine/socat
-    container_name: ui_bridge
     ports:
-      - "8080:8080"
+      # Allows dynamic port assignment, falls back to 8080 if not set
+      - "${HOST_PORT:-8080}:8080"
+    # routes traffic using the internal service name 'claude-sandbox'
     command: tcp-listen:8080,fork,reuseaddr tcp-connect:claude-sandbox:8080
     networks:
-      - default    # Exposes port 8080 to localhost
+      - default    # Exposes port to localhost
       - secure_net # Routes to the isolated sandbox
     depends_on:
       - claude-sandbox
