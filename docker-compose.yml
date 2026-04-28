@@ -8,23 +8,37 @@ services:
       - secure_net # For sandbox access
 
   claude-sandbox:
-    image: claude-sandbox-image
-    environment:
-      - http_proxy=http://proxy_guard:3128
-      - https_proxy=http://proxy_guard:3128
-      - no_proxy=localhost,127.0.0.1,0.0.0.0
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    volumes:
-      - ${TARGET_REPO_ABS}:/workspace/readonly_repo:ro
-    networks:
-      - secure_net
-    stdin_open: true 
-    tty: true        
-    command: >
-      bash -c "cp -a /workspace/readonly_repo /workspace/active_repo &&
-               cd /workspace/active_repo &&
-               code-server --bind-addr 0.0.0.0:8080 --auth none"
-
+      image: claude-sandbox-image
+      environment:
+        - http_proxy=http://proxy_guard:3128
+        - https_proxy=http://proxy_guard:3128
+        - HTTP_PROXY=http://proxy_guard:3128
+        - HTTPS_PROXY=http://proxy_guard:3128
+        - ALL_PROXY=http://proxy_guard:3128
+        - no_proxy=localhost,127.0.0.1,0.0.0.0
+        - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      volumes:
+        - ${TARGET_REPO_ABS}:/workspace/readonly_repo:ro
+      networks:
+        - secure_net
+      stdin_open: true 
+      tty: true        
+      command: >
+        bash -c '
+          # Intercept the Nix binary and force the proxy flag into every call
+          if [ ! -f /root/.nix-profile/bin/nix-real ]; then
+            mv /root/.nix-profile/bin/nix /root/.nix-profile/bin/nix-real
+            echo "#!/bin/bash" > /root/.nix-profile/bin/nix
+            echo "export http_proxy=http://proxy_guard:3128" >> /root/.nix-profile/bin/nix
+            echo "export https_proxy=http://proxy_guard:3128" >> /root/.nix-profile/bin/nix
+            echo "exec /root/.nix-profile/bin/nix-real --option proxy http://proxy_guard:3128 \"\$@\"" >> /root/.nix-profile/bin/nix
+            chmod +x /root/.nix-profile/bin/nix
+          fi
+          
+          # Standard startup
+          cp -a /workspace/readonly_repo /workspace/active_repo
+          cd /workspace/active_repo
+          code-server --bind-addr 0.0.0.0:8080 --auth none'
   ui_bridge:
     image: alpine/socat
     ports:
