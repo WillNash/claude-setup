@@ -28,9 +28,6 @@ RUN curl -fsSL https://code-server.dev/install.sh | sh
 # Install Claude Code via npm
 RUN npm install -g @anthropic-ai/claude-code
 
-# The Nix installer expects the USER environment variable to be set
-ENV USER=root
-
 # Pre-configure Nix before installing it:
 # 1. Disable the multi-user build group requirement
 # 2. Enable flakes and the new command-line interface
@@ -45,8 +42,22 @@ RUN mkdir -p /etc/nix && \
 RUN mkdir -m 0755 /nix && \
     curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
 
-# Add Nix to the PATH so subsequent Docker build steps can use it
-ENV PATH="/root/.nix-profile/bin:${PATH}"
+# 2. Create the unprivileged user FIRST
+RUN useradd -m -s /bin/bash devuser
+
+# 3. Pre-create the /nix folder and give devuser ownership BEFORE installing Nix
+RUN mkdir -p /nix && chown devuser:devuser /nix
+
+# 4. Switch to the new user. Every command after this line runs as devuser!
+USER devuser
+ENV USER=devuser
+ENV HOME=/home/devuser
+
+# 5. Install Nix. Because devuser owns /nix, it installs perfectly without root.
+RUN curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+
+# 6. Add Nix to the system PATH so Docker can find the 'nix' and 'devenv' commands
+ENV PATH="/home/devuser/.nix-profile/bin:$PATH"
 
 # Install the exact patch version of devenv using Nix flakes
 RUN nix profile install --accept-flake-config github:cachix/devenv/v1.3.1
