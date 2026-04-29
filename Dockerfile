@@ -42,22 +42,8 @@ RUN mkdir -p /etc/nix && \
 RUN mkdir -m 0755 /nix && \
     curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
 
-# 2. Create the unprivileged user FIRST
-RUN useradd -m -s /bin/bash devuser
-
-# 3. Pre-create the /nix folder and give devuser ownership BEFORE installing Nix
-RUN mkdir -p /nix && chown devuser:devuser /nix
-
-# 4. Switch to the new user. Every command after this line runs as devuser!
-USER devuser
-ENV USER=devuser
-ENV HOME=/home/devuser
-
-# 5. Install Nix. Because devuser owns /nix, it installs perfectly without root.
-RUN curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
-
-# 6. Add Nix to the system PATH so Docker can find the 'nix' and 'devenv' commands
-ENV PATH="/home/devuser/.nix-profile/bin:$PATH"
+# Add Nix to the PATH so subsequent Docker build steps can use it
+ENV PATH="/root/.nix-profile/bin:${PATH}"
 
 # Install the exact patch version of devenv using Nix flakes
 RUN nix profile install --accept-flake-config github:cachix/devenv/v1.3.1
@@ -73,3 +59,10 @@ WORKDIR /workspace
 
 # Default to bash so the .bashrc hooks execute properly
 CMD ["bash"]
+# Create an unprivileged user for running Postgres and DevEnv securely,
+# and hand over ownership of the entire Nix store so they can build packages.
+RUN useradd -m -s /bin/bash devuser && \
+    cp /root/.bashrc /home/devuser/.bashrc && \
+    chown devuser:devuser /home/devuser/.bashrc && \
+    chmod 755 /root && \
+    chown -R devuser:devuser /nix
