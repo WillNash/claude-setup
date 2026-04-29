@@ -14,24 +14,23 @@ services:
       - https_proxy=http://proxy_guard:3128
       - no_proxy=localhost,127.0.0.1,0.0.0.0
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CODE_SERVER_PORT=${CODE_SERVER_PORT:-8081}      
     volumes:
       - ${TARGET_REPO_ABS}:/workspace/readonly_repo:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
     networks:
       - secure_net
     stdin_open: true 
     tty: true        
-    command: >
-      bash -c "cp -a /workspace/readonly_repo /workspace/active_repo &&
-               cd /workspace/active_repo &&
-               code-server --bind-addr 0.0.0.0:8080 --auth none"
+    command: bash /entrypoint.sh
 
   ui_bridge:
     image: alpine/socat
     ports:
       # Allows dynamic port assignment, falls back to 8080 if not set
-      - "${HOST_PORT:-8080}:8080"
+      - "${HOST_PORT:-8080}:${CODE_SERVER_PORT:-8081}"
     # routes traffic using the internal service name 'claude-sandbox'
-    command: tcp-listen:8080,fork,reuseaddr tcp-connect:claude-sandbox:8080
+    command: tcp-listen:${CODE_SERVER_PORT:-8081},fork,reuseaddr tcp-connect:claude-sandbox:${CODE_SERVER_PORT:-8081}
     networks:
       - default    # Exposes port to localhost
       - secure_net # Routes to the isolated sandbox
