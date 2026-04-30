@@ -27,5 +27,5 @@ exec su devuser -c '
     source /root/.nix-profile/etc/profile.d/nix.sh
     
     direnv allow .
-    direnv exec . code-server --bind-addr 0.0.0.0:8080 --auth none
+    direnv exec . code-server --bind-addr 0.0.0.0:8081 --auth none
 '
