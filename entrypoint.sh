@@ -1,31 +1,33 @@
 #!/bin/bash
 set -e
 
-# Clean up old state
-rm -rf /homeless-shelter /workspace/active_repo
+# Clean up old state (if the container was restarted)
+rm -rf /workspace/active_repo
 
-# Copy the repo and assign ownership
-cp -a /workspace/readonly_repo /workspace/active_repo
+# Copy the repo using -r instead of -a
+# (-r creates new files naturally owned by devuser, avoiding host UID conflicts)
+cp -r /workspace/readonly_repo /workspace/active_repo
 
-# Delete any host-machine caches that accidentally got copied over
-rm -rf /workspace/active_repo/backend/.devenv
-rm -rf /workspace/active_repo/backend/.direnv
-rm -rf /workspace/active_repo/.direnv
-
-chown -R devuser:devuser /workspace/active_repo
+# Make sure devuser has write permissions to the newly copied files
 chmod -R u+rwX /workspace/active_repo
-# Create a valid runtime directory for devenv/postgres
-mkdir -p /run/user/1000
-chown devuser:devuser /run/user/1000
 
-# 3. Switch to the unprivileged user and start the environment
+# Aggressively delete ALL host-machine caches that got copied over
+find /workspace/active_repo -type d -name ".devenv" -exec rm -rf {} +
+find /workspace/active_repo -type d -name ".direnv" -exec rm -rf {} +
+find /workspace/active_repo -type d -name ".direnv_cache" -exec rm -rf {} +
+
+# Start the environment
 cd /workspace/active_repo
-exec su devuser -c '
-    export HOME=/home/devuser
-    export USER=devuser
-    export XDG_RUNTIME_DIR=/run/user/1000
-    source /root/.nix-profile/etc/profile.d/nix.sh
+
+export HOME=/home/devuser
+export USER=devuser
+export XDG_RUNTIME_DIR=/run/user/1000
+
+# Use the correct Nix path for devuser
+source /home/devuser/.nix-profile/etc/profile.d/nix.sh
     
-    direnv allow .
-    direnv exec . code-server --bind-addr 0.0.0.0:8081 --auth none
-'
+direnv allow .
+
+# We no longer need 'su' because we are already devuser. 
+# Execute code-server directly.
+exec direnv exec . code-server --bind-addr 0.0.0.0:8081 --auth none
