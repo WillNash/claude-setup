@@ -5,7 +5,8 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install essential system dependencies
-RUN apt-get update && \
+RUN apt-get clean && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     wget \
     curl \
@@ -15,6 +16,7 @@ RUN apt-get update && \
     npm \
     direnv \
     ca-certificates \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 
 # Tell Git to trust all directories, and set a default sandbox identity
