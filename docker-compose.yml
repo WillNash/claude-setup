@@ -9,7 +9,7 @@ services:
   api_bridge:
       image: alpine/socat
       ports:
-        - "127.0.0.1:8080:8080" # Maps host 8080 to the bridge
+        - "127.0.0.1:8082:8080" # Maps host 8080 to the bridge
       # Tunnels traffic from the bridge directly into the sandbox's backend
       command: tcp-listen:8080,fork,reuseaddr tcp-connect:claude-sandbox:8080
       networks:
@@ -33,7 +33,16 @@ services:
     stdin_open: true 
     tty: true        
     command: bash /entrypoint.sh
-
+  admin_bridge:
+      image: alpine/socat
+      ports:
+        - "127.0.0.1:9001:9000"
+      command: tcp-listen:9000,fork,reuseaddr tcp-connect:claude-sandbox:9000
+      networks:
+        - default
+        - secure_net
+      depends_on:
+        - claude-sandbox
   ui_bridge:
     image: alpine/socat
     ports:
