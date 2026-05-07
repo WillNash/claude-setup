@@ -6,7 +6,17 @@ services:
     networks:
       - default    # For internet access
       - secure_net # For sandbox access
-
+  api_bridge:
+      image: alpine/socat
+      ports:
+        - "127.0.0.1:8080:8080" # Maps host 8080 to the bridge
+      # Tunnels traffic from the bridge directly into the sandbox's backend
+      command: tcp-listen:8080,fork,reuseaddr tcp-connect:claude-sandbox:8080
+      networks:
+        - default    # Exposes port to your local machine
+        - secure_net # Reaches into the isolated sandbox
+      depends_on:
+        - claude-sandbox
   claude-sandbox:
     image: claude-sandbox-image
     environment:
