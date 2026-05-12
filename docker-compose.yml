@@ -4,8 +4,9 @@ services:
     volumes:
       - ./squid.conf:/etc/squid/squid.conf:ro
     networks:
-      - default    # For internet access
-      - secure_net # For sandbox access
+          default:     # dynamic IP for external internet
+          secure_net:
+            ipv4_address: 10.50.0.5  # Forces this specific IP on the secure net
   api_bridge:
       image: alpine/socat
       ports:
@@ -19,12 +20,17 @@ services:
         - claude-sandbox
   claude-sandbox:
     image: claude-sandbox-image
+    runtime: kata-runtime
     environment:
-      - http_proxy=http://proxy_guard:3128
-      - https_proxy=http://proxy_guard:3128
+      - HTTP_PROXY=http://10.50.0.5:3128
+      - HTTPS_PROXY=http://10.50.0.5:3128
+      - GLOBAL_AGENT_HTTP_PROXY=http://10.50.0.5:3128
+      - http_proxy=http://10.50.0.5:3128
+      - https_proxy=http://10.50.0.5:3128
+      - NO_PROXY=localhost,127.0.0.1,0.0.0.0
       - no_proxy=localhost,127.0.0.1,0.0.0.0
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - CODE_SERVER_PORT=8081      
+      - CODE_SERVER_PORT=8081
     volumes:
       - ${TARGET_REPO_ABS}:/workspace/readonly_repo:ro
       - ./entrypoint.sh:/entrypoint.sh:ro
@@ -58,4 +64,7 @@ services:
 
 networks:
   secure_net:
-    internal: true # Automatically created by compose, blocks internet access
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.50.0.0/16  # Assigns a dedicated private subnet
