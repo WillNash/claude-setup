@@ -27,6 +27,11 @@ wget https://github.com/kata-containers/kata-containers/releases/download/3.30.0
 
 sudo tar -xf kata-static-3.30.0-amd64.tar.zst -C /
 
+### Symlink them
+
+sudo ln -s /opt/kata/bin/kata-runtime /usr/local/bin/kata-runtime
+sudo ln -s /opt/kata/bin/containerd-shim-kata-v2 /usr/local/bin/containerd-shim-kata-v2
+
 ### Tell docker about kata 
 
 modify /etc/docker/daemon.json
