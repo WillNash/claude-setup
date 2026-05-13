@@ -21,6 +21,11 @@ services:
   claude-sandbox:
     image: claude-sandbox-image
     runtime: kata-runtime
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+          cpus: '8'
     environment:
       - HTTP_PROXY=http://10.50.0.5:3128
       - HTTPS_PROXY=http://10.50.0.5:3128
