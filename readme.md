@@ -10,12 +10,34 @@ docker build -t claude-sandbox-image .
 
 ## Make the networks and run the services
 
-docker compose up
+docker compose up -d
 
 ## Enter the container
 docker exec -u devuser -it claude-setup-claude-sandbox-1 bash
 
-rm -rf /homeless-shelter
-rm -rf /workspace/active_repo/backend/.devenv
-rm -rf /workspace/active_repo/backend/.direnv
-export XDG_RUNTIME_DIR=/tmp
+## Some notes on setting up KATA
+
+### install zstd
+
+sudo apt update && sudo apt install zstd
+
+### Install only the needed kata containers - this installs kata-runtime
+
+wget https://github.com/kata-containers/kata-containers/releases/download/3.30.0/kata-static-3.30.0-amd64.tar.zst
+
+sudo tar -xf kata-static-3.30.0-amd64.tar.zst -C /
+
+### Tell docker about kata 
+
+modify /etc/docker/daemon.json
+{
+  "runtimes": {
+    "kata-runtime": {
+      "runtimeType": "io.containerd.kata.v2"
+    }
+  }
+}
+
+### restart docker
+
+sudo systemctl restart docker
