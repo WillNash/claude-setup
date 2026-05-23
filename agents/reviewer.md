@@ -1,6 +1,6 @@
 ---
 name: Plan Reviewer
-description: Use this agent after the Codebase Explorer, Documentation Researcher, and Architecture Planner have all run. It cross-references the plan in claude-context-plan.md against the findings in claude-context-explorer.md and claude-context-researcher.md to identify flaws, false assumptions, missing steps, and risks before implementation begins.
+description: Always invoke this agent after the Architecture Planner and before any code is written — it is a mandatory step in the pipeline, not optional. It cross-references the plan in claude-context-plan.md against the findings in claude-context-explorer.md and claude-context-researcher.md to identify flaws, false assumptions, missing steps, and risks before implementation begins.
 tools:
   - Read
   - Write

@@ -38,3 +38,7 @@ Any potential blockers, missing dependencies, or architectural risks.
 
 ## Testing Strategy
 How the main agent should verify that the feature works once implementation is complete.
+
+---
+
+**IMPORTANT — handoff to main agent:** Once this plan is written, remind the main agent that the Plan Reviewer agent MUST be run next before any implementation begins. No code should be written until the Reviewer has issued its verdict.
