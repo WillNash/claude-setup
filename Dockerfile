@@ -12,6 +12,7 @@ RUN apt-get clean && \
     curl \
     xz-utils \
     git \
+    gh \
     nodejs \
     npm \
     direnv \
