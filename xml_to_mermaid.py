@@ -27,7 +27,8 @@ Usage:
   python3 xml_to_mermaid.py test.xml diagram.md
   Must come immediately after the XML file, before any flags:
   python3 xml_to_mermaid.py test.xml diagram.md --area "2. Local"
-
+  python3 xml_to_mermaid.py test.xml --config-detail
+  python3 xml_to_mermaid.py test.xml --area "1. Admin" --config-detail
   ---
   --area AREA
 
@@ -83,7 +84,7 @@ Usage:
   │ Grey rectangle                        │ [text]   │ Sink (only visible with --include-sinks)                 │
   └───────────────────────────────────────┴──────────┴──────────────────────────────────────────────────────────┘    
     
-    
+
 """
 
 import re
@@ -129,6 +130,83 @@ def _label(text: str) -> str:
     return text.replace('"', "'")
 
 
+# Config properties to extract per comm point type, in priority order.
+# The first non-empty value found is used as the detail label.
+_DETAIL_PROPS: dict[str, list[str]] = {
+    "Directory":               ["INPUT_DIRECTORY_NAME", "OUTPUT_DIRECTORY_NAME"],
+    "TCPClient":               ["HOST", "PORT"],
+    "TCPServer":               ["LOCALPORT"],
+    "Database":                ["Host", "DatabaseName"],
+    "DatabaseInserter":        ["Host", "DatabaseName"],
+    "E-mail":                  ["TO", "OUTGOING_HOST"],
+    "HTTPClient":              ["URL"],
+    "HTTPServer":              ["ContextPath", "LocalPort"],
+    "rhapsody:FileTransfer":   ["Server", "Port"],
+    "TimerCommPoint":          ["RefreshRate"],
+    "SOAPWebServiceConsumer":  ["URL"],
+    "LLP":                     ["HOST", "PORT"],
+    "JMSMessageConsumer":      ["providerURL"],
+    "JMSMessageProducer":      ["providerURL"],
+}
+
+
+def _format_detail(cp_type: str, config: dict[str, str], is_source: bool) -> str:
+    """Return a short detail string for a comm point label, or empty string."""
+    props = _DETAIL_PROPS.get(cp_type, [])
+    if not props:
+        return ""
+
+    if cp_type == "Directory":
+        key = "INPUT_DIRECTORY_NAME" if is_source else "OUTPUT_DIRECTORY_NAME"
+        val = config.get(key, "")
+        if not val:
+            val = config.get("INPUT_DIRECTORY_NAME") or config.get("OUTPUT_DIRECTORY_NAME", "")
+        return val
+
+    if cp_type in ("TCPClient", "LLP"):
+        host = config.get("HOST", "")
+        port = config.get("PORT", "")
+        if host or port:
+            return f"{host}:{port}" if host else f":{port}"
+
+    if cp_type == "TCPServer":
+        port = config.get("LOCALPORT", "")
+        return f":{port}" if port else ""
+
+    if cp_type in ("Database", "DatabaseInserter"):
+        host = config.get("Host", "")
+        db = config.get("DatabaseName", "")
+        parts = [p for p in [host, db] if p]
+        return "/".join(parts)
+
+    if cp_type == "TimerCommPoint":
+        ms = config.get("RefreshRate", "")
+        try:
+            secs = int(ms) // 1000
+            return f"every {secs}s"
+        except (ValueError, TypeError):
+            return ms
+
+    if cp_type == "HTTPServer":
+        path = config.get("ContextPath", "")
+        port = config.get("LocalPort", "")
+        if port and path:
+            return f":{port}{path}"
+        return port or path
+
+    if cp_type == "rhapsody:FileTransfer":
+        server = config.get("Server", "")
+        port = config.get("Port", "")
+        return f"{server}:{port}" if server else ""
+
+    # Default: return first non-empty value from the priority list
+    for key in props:
+        val = config.get(key, "")
+        if val:
+            return val
+    return ""
+
+
 @dataclass
 class CPInfo:
     id: str
@@ -138,6 +216,7 @@ class CPInfo:
     folder: str
     is_router: bool = False
     delivery_mode: Optional[str] = None  # None | "alwaysStatic" | "dynamicDestination"
+    config: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -164,17 +243,16 @@ def parse_xml(filepath: str) -> tuple[dict, dict]:
 
         is_router = cp_type == "rhapsody:router"
         delivery_mode = None
-        if is_router:
-            for prop in el.iter(_t("Property")):
-                name_el = prop.find(_t("Name"))
-                val_el = prop.find(_t("Value"))
-                if (
-                    name_el is not None
-                    and name_el.text == "DeliveryMode"
-                    and val_el is not None
-                ):
+        config: dict[str, str] = {}
+        for prop in el.findall(f".//{_t('Configuration')}/{_t('Property')}"):
+            name_el = prop.find(_t("Name"))
+            val_el = prop.find(_t("Value"))
+            if name_el is not None and val_el is not None and val_el.text:
+                val = val_el.text.strip()
+                if val:
+                    config[name_el.text] = val
+                if is_router and name_el.text == "DeliveryMode":
                     delivery_mode = val_el.text
-                    break
 
         cps[cp_id] = CPInfo(
             id=cp_id,
@@ -184,6 +262,7 @@ def parse_xml(filepath: str) -> tuple[dict, dict]:
             folder=folder,
             is_router=is_router,
             delivery_mode=delivery_mode,
+            config=config,
         )
 
     routes: dict[str, RouteInfo] = {}
@@ -214,7 +293,9 @@ def parse_xml(filepath: str) -> tuple[dict, dict]:
     return cps, routes
 
 
-def _cp_node_def(cp: CPInfo, is_source: bool, is_dest: bool) -> tuple[str, str]:
+def _cp_node_def(
+    cp: CPInfo, is_source: bool, is_dest: bool, show_detail: bool = False
+) -> tuple[str, str]:
     """Return (node definition line, css class name) for a comm point."""
     nid = _node_id(cp.id)
     lbl = _label(cp.name)
@@ -229,13 +310,19 @@ def _cp_node_def(cp: CPInfo, is_source: bool, is_dest: bool) -> tuple[str, str]:
     if cp.cp_type == "Sink":
         return f'    {nid}["{lbl}\\n[Sink]"]', "sink"
 
+    detail = ""
+    if show_detail:
+        raw = _format_detail(cp.cp_type, cp.config, is_source)
+        if raw:
+            detail = f"\\n{_label(raw)}"
+
     # Determine direction from actual usage in routes
     if is_source and not is_dest:
-        return f'    {nid}[/"{lbl}\\n({short_type})"/]', "inputCP"
+        return f'    {nid}[/"{lbl}\\n({short_type}){detail}"/]', "inputCP"
     if is_dest and not is_source:
-        return f'    {nid}["{lbl}\\n({short_type})"]', "outputCP"
+        return f'    {nid}["{lbl}\\n({short_type}){detail}"]', "outputCP"
     # Bidirectional — appears as both input and output
-    return f'    {nid}[/"{lbl}\\n({short_type})\\n[bidirectional]"/]', "inputCP"
+    return f'    {nid}[/"{lbl}\\n({short_type}){detail}\\n[bidirectional]"/]', "inputCP"
 
 
 def generate_mermaid(
@@ -244,6 +331,7 @@ def generate_mermaid(
     area_filter: Optional[str] = None,
     include_sinks: bool = False,
     use_subgraphs: bool = False,
+    config_detail: bool = False,
 ) -> str:
     lines: list[str] = ["flowchart LR"]
     lines += [
@@ -318,6 +406,7 @@ def generate_mermaid(
             cp,
             is_source=cp.id in source_cp_ids,
             is_dest=cp.id in dest_cp_ids,
+            show_detail=config_detail,
         )
         cp_node_defs.append(defn)
         class_assigns.append(f"    {nid}:::{css}")
@@ -386,6 +475,11 @@ def main() -> None:
         action="store_true",
         help="Include Sink comm points (message-discard endpoints) in diagram",
     )
+    parser.add_argument(
+        "--config-detail",
+        action="store_true",
+        help="Append key config properties to comm point labels (e.g. host:port, directory path)",
+    )
     args = parser.parse_args()
 
     print(f"Parsing {args.input_xml} ...", file=sys.stderr)
@@ -400,6 +494,7 @@ def main() -> None:
         area_filter=args.area,
         include_sinks=args.include_sinks,
         use_subgraphs=args.subgraphs,
+        config_detail=args.config_detail,
     )
 
     if args.output:
