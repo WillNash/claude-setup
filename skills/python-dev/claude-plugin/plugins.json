@@ -1,0 +1,8 @@
+{
+  "name": "python-dev",
+  "description": "Senior Python developer skill for writing clean, modern, typesafe Python code",
+  "version": "1.0.0",
+  "author": {
+    "name": "will@koan.co.nz"
+  }
+}
