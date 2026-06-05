@@ -11,7 +11,7 @@ Usage:
     python3 xml_to_mermaid.py <input.xml> --area "6. ePharmacy v8"
     python3 xml_to_mermaid.py <input.xml> --subgraphs
     python3 xml_to_mermaid.py <input.xml> --include-sinks
-    
+    python3 xml_to_mermaid.py <input.xml> areas.txt --list-areas
     
  ---
   Arguments
@@ -462,6 +462,13 @@ def generate_mermaid(
             cp_nid = add_cp(cp)
             edges.append(f"    {r_nid} --> {cp_nid}")
 
+        if not area_routes and area_filter:
+            print(
+                f"Warning: --area {area_filter!r} matched no routes. "
+                "Run with --list-areas to see valid values.",
+                file=sys.stderr,
+            )
+
     for area, route_list in sorted(area_routes.items()):
         for route in route_list:
             process_route(route, area)
@@ -509,6 +516,11 @@ def main() -> None:
         action="store_true",
         help="Append key config properties to comm point labels (e.g. host:port, directory path)",
     )
+    parser.add_argument(
+        "--list-areas",
+        action="store_true",
+        help="List valid --area values from the XML and exit",
+    )
     args = parser.parse_args()
 
     print(f"Parsing {args.input_xml} ...", file=sys.stderr)
@@ -518,6 +530,17 @@ def main() -> None:
         f"{len(variables)} variables",
         file=sys.stderr,
     )
+
+    if args.list_areas:
+        areas = sorted({_area_from_folder(r.folder) for r in routes.values()})
+        if args.output:
+            with open(args.output, "w") as fh:
+                fh.write("\n".join(areas) + "\n")
+            print(f"Written to {args.output}", file=sys.stderr)
+        else:
+            for area in areas:
+                print(area)
+        return
 
     diagram = generate_mermaid(
         cps,
