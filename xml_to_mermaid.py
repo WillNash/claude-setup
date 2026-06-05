@@ -12,6 +12,7 @@ Usage:
     python3 xml_to_mermaid.py <input.xml> --subgraphs
     python3 xml_to_mermaid.py <input.xml> --include-sinks
     
+    
  ---
   Arguments
 
@@ -83,8 +84,7 @@ Usage:
   ├───────────────────────────────────────┼──────────┼──────────────────────────────────────────────────────────┤
   │ Grey rectangle                        │ [text]   │ Sink (only visible with --include-sinks)                 │
   └───────────────────────────────────────┴──────────┴──────────────────────────────────────────────────────────┘    
-    
-
+        
 """
 
 import re
@@ -150,32 +150,38 @@ _DETAIL_PROPS: dict[str, list[str]] = {
 }
 
 
-def _format_detail(cp_type: str, config: dict[str, str], is_source: bool) -> str:
+def _format_detail(
+    cp_type: str, config: dict[str, str], is_source: bool,
+    variables: Optional[dict[str, str]] = None,
+) -> str:
     """Return a short detail string for a comm point label, or empty string."""
     props = _DETAIL_PROPS.get(cp_type, [])
     if not props:
         return ""
+
+    def resolve(v: str) -> str:
+        return _resolve(v, variables) if variables else v
 
     if cp_type == "Directory":
         key = "INPUT_DIRECTORY_NAME" if is_source else "OUTPUT_DIRECTORY_NAME"
         val = config.get(key, "")
         if not val:
             val = config.get("INPUT_DIRECTORY_NAME") or config.get("OUTPUT_DIRECTORY_NAME", "")
-        return val
+        return resolve(val)
 
     if cp_type in ("TCPClient", "LLP"):
-        host = config.get("HOST", "")
-        port = config.get("PORT", "")
+        host = resolve(config.get("HOST", ""))
+        port = resolve(config.get("PORT", ""))
         if host or port:
             return f"{host}:{port}" if host else f":{port}"
 
     if cp_type == "TCPServer":
-        port = config.get("LOCALPORT", "")
+        port = resolve(config.get("LOCALPORT", ""))
         return f":{port}" if port else ""
 
     if cp_type in ("Database", "DatabaseInserter"):
-        host = config.get("Host", "")
-        db = config.get("DatabaseName", "")
+        host = resolve(config.get("Host", ""))
+        db = resolve(config.get("DatabaseName", ""))
         parts = [p for p in [host, db] if p]
         return "/".join(parts)
 
@@ -188,22 +194,22 @@ def _format_detail(cp_type: str, config: dict[str, str], is_source: bool) -> str
             return ms
 
     if cp_type == "HTTPServer":
-        path = config.get("ContextPath", "")
-        port = config.get("LocalPort", "")
+        path = resolve(config.get("ContextPath", ""))
+        port = resolve(config.get("LocalPort", ""))
         if port and path:
             return f":{port}{path}"
         return port or path
 
     if cp_type == "rhapsody:FileTransfer":
-        server = config.get("Server", "")
-        port = config.get("Port", "")
+        server = resolve(config.get("Server", ""))
+        port = resolve(config.get("Port", ""))
         return f"{server}:{port}" if server else ""
 
     # Default: return first non-empty value from the priority list
     for key in props:
         val = config.get(key, "")
         if val:
-            return val
+            return resolve(val)
     return ""
 
 
@@ -228,7 +234,16 @@ class RouteInfo:
     output_cp_ids: list = field(default_factory=list)
 
 
-def parse_xml(filepath: str) -> tuple[dict, dict]:
+def _resolve(value: str, variables: dict[str, str]) -> str:
+    """Replace $(VAR_NAME) tokens with values from the Variables section."""
+    return re.sub(
+        r"\$\(([^)]+)\)",
+        lambda m: variables.get(m.group(1), m.group(0)),
+        value,
+    )
+
+
+def parse_xml(filepath: str) -> tuple[dict, dict, dict]:
     tree = ET.parse(filepath)
     root = tree.getroot()
 
@@ -290,11 +305,23 @@ def parse_xml(filepath: str) -> tuple[dict, dict]:
             output_cp_ids=output_cps,
         )
 
-    return cps, routes
+    variables: dict[str, str] = {}
+    vars_el = root.find(_t("Variables"))
+    if vars_el is not None:
+        for var in vars_el.findall(_t("Variable")):
+            name_el = var.find(_t("Name"))
+            val_el = var.find(_t("Value"))
+            if name_el is not None and name_el.text:
+                variables[name_el.text] = (
+                    val_el.text.strip() if val_el is not None and val_el.text else ""
+                )
+
+    return cps, routes, variables
 
 
 def _cp_node_def(
-    cp: CPInfo, is_source: bool, is_dest: bool, show_detail: bool = False
+    cp: CPInfo, is_source: bool, is_dest: bool, show_detail: bool = False,
+    variables: Optional[dict[str, str]] = None,
 ) -> tuple[str, str]:
     """Return (node definition line, css class name) for a comm point."""
     nid = _node_id(cp.id)
@@ -312,7 +339,7 @@ def _cp_node_def(
 
     detail = ""
     if show_detail:
-        raw = _format_detail(cp.cp_type, cp.config, is_source)
+        raw = _format_detail(cp.cp_type, cp.config, is_source, variables)
         if raw:
             detail = f"\\n{_label(raw)}"
 
@@ -328,6 +355,7 @@ def _cp_node_def(
 def generate_mermaid(
     cps: dict[str, CPInfo],
     routes: dict[str, RouteInfo],
+    variables: Optional[dict[str, str]] = None,
     area_filter: Optional[str] = None,
     include_sinks: bool = False,
     use_subgraphs: bool = False,
@@ -407,6 +435,7 @@ def generate_mermaid(
             is_source=cp.id in source_cp_ids,
             is_dest=cp.id in dest_cp_ids,
             show_detail=config_detail,
+            variables=variables,
         )
         cp_node_defs.append(defn)
         class_assigns.append(f"    {nid}:::{css}")
@@ -483,14 +512,17 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f"Parsing {args.input_xml} ...", file=sys.stderr)
-    cps, routes = parse_xml(args.input_xml)
+    cps, routes, variables = parse_xml(args.input_xml)
     print(
-        f"Found {len(cps)} comm points, {len(routes)} routes", file=sys.stderr
+        f"Found {len(cps)} comm points, {len(routes)} routes, "
+        f"{len(variables)} variables",
+        file=sys.stderr,
     )
 
     diagram = generate_mermaid(
         cps,
         routes,
+        variables=variables,
         area_filter=args.area,
         include_sinks=args.include_sinks,
         use_subgraphs=args.subgraphs,
