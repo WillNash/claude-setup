@@ -8,12 +8,27 @@
 
 docker build -t claude-sandbox-image .
 
+OR 
+
+docker build -f Dockerfile.alpha -t my-alpha-image .
+
 ## Make the networks and run the services
 
 docker compose up -d
 
+### Optionally set the target repo and ports
+TARGET_REPO_ABS=/path/to/repo1 \
+API_PORT=8082 \
+ADMIN_PORT=9001 \
+UI_PORT=8081 \
+SANDBOX_IMAGE=my-alpha-image \
+docker compose -p project-alpha up -d
+
 ## Enter the container
 docker exec -u devuser -it claude-setup-claude-sandbox-1 bash
+
+### Optionally enter the named version
+docker exec -u devuser -it project-alpha-claude-sandbox-1 bash
 
 ## Some notes on setting up KATA
 
@@ -46,3 +61,4 @@ modify /etc/docker/daemon.json
 ### restart docker
 
 sudo systemctl restart docker
+
