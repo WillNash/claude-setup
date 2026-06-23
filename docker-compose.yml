@@ -40,6 +40,7 @@ services:
       - CODE_SERVER_PORT=8081
     volumes:
       - ${TARGET_REPO_ABS}:/workspace/readonly_repo:ro
+      - ~/.claude:/workspace/readonly_skills:ro
       - ./entrypoint.sh:/entrypoint.sh:ro
     networks:
       - secure_net

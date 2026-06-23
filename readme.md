@@ -8,6 +8,10 @@
 
 docker build -t claude-sandbox-image .
 
+OR 
+
+docker build -f Dockerfile.alpha -t my-alpha-image .
+
 ## Make the networks and run the services
 
 docker compose up -d
