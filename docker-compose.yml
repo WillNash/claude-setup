@@ -20,7 +20,7 @@ services:
       - claude-sandbox
 
   claude-sandbox:
-    image: claude-sandbox-image
+    image: ${SANDBOX_IMAGE:-claude-sandbox-image}
     runtime: kata-runtime
     deploy:
       resources:
