@@ -13,11 +13,11 @@ docker build -t claude-sandbox-image .
 docker compose up -d
 
 ### Optionally set the target repo and ports
-
 TARGET_REPO_ABS=/path/to/repo1 \
 API_PORT=8082 \
 ADMIN_PORT=9001 \
 UI_PORT=8081 \
+SANDBOX_IMAGE=my-alpha-image \
 docker compose -p project-alpha up -d
 
 ## Enter the container
