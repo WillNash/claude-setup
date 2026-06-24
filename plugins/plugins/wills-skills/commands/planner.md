@@ -1,6 +1,7 @@
 ---
 name: Architecture Planner
 description: Use this agent at the beginning of a complex task, feature request, or refactor. Typically invoked after the Codebase Explorer and before implementation. It will analyze the goal, survey the current project structure, and return a step-by-step actionable implementation plan written to claude-context-plan.md.
+argument-hint: <subject of planning>
 tools:
   - Read
   - Glob

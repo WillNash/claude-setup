@@ -1,6 +1,7 @@
 ---
 name: Documentation Researcher
 description: Use this agent when you need to look up external documentation, find up-to-date API references, or learn the syntax for a specific tool or library. Can be invoked in parallel with the Codebase Explorer. It will search the web, read the docs, and return necessary implementation details written to claude-context-researcher.md.
+argument-hint: <topic to research>
 tools:
   - WebSearch
   - WebFetch

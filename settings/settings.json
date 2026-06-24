@@ -1,0 +1,17 @@
+{
+  "theme": "dark",
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "extraKnownMarketplaces": {
+    "wills-plugins": {
+      "source": {
+        "source": "directory",
+        "path": "/home/devuser/.claude/plugins/wills-plugins"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "wills-skills@wills-plugins": true
+  }
+}
