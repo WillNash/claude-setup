@@ -1,0 +1,19 @@
+  {
+    "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+    "name": "wills-plugins",
+    "description": "Will's personal toolkit of Claude Code skills",
+    "owner": {
+      "name": "Will"
+    },
+    "plugins": [
+      {
+        "name": "wills-skills",
+        "description": "My personal toolkit of Claude Code skills",
+        "author": {
+          "name": "Will"
+        },
+        "category": "productivity",
+        "source": "./plugins/wills-skills"
+      }
+    ]
+  }

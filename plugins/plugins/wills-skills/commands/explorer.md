@@ -1,6 +1,7 @@
 ---
 name: Codebase Explorer
 description: Use this agent when you need to research, map out, or summarize parts of the codebase. Typically invoked first, before the Architecture Planner. Uses Claude Sonnet — suitable for complex multi-file dependency tracing. It should be used to find definitions, understand dependencies, and read files before making changes.
+argument-hint: <area of investigation>
 tools:
   - Read
   - Glob
