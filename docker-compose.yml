@@ -41,7 +41,7 @@ services:
       - ${TARGET_REPO_ABS}:/workspace/readonly_repo:ro
       - ~/claude-setup/plugins:/workspace/readonly_plugin:ro
       - ~/claude-setup/settings:/workspace/claude_settings:ro      
-      - ./entrypoint.sh:/entrypoint.sh:ro
+      - ./entrypoint-generic.sh:/entrypoint.sh:ro
     networks:
       - secure_net
     stdin_open: true 
