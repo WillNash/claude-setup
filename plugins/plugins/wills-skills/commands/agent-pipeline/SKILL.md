@@ -21,8 +21,8 @@ You are orchestrating a structured planning pipeline. **No code should be writte
 
 Launch two agents in parallel (single message, two Agent tool calls):
 
-- **Explorer**: `Read /home/devuser/.claude/plugins/wills-plugins/plugins/wills-skills/commands/explorer.md, ignore the YAML frontmatter, and follow the instructions in the body for this goal: $ARGUMENTS`
-- **Researcher**: `Read /home/devuser/.claude/plugins/wills-plugins/plugins/wills-skills/commands/researcher.md, ignore the YAML frontmatter, and follow the instructions in the body for this goal: $ARGUMENTS`
+- **Explorer**: Agent tool with `subagent_type: "will-custom-skills:explorer"`, prompt: `$ARGUMENTS`
+- **Researcher**: Agent tool with `subagent_type: "will-custom-skills:researcher"`, prompt: `$ARGUMENTS`
 
 Wait for both to complete before proceeding.
 
@@ -32,7 +32,7 @@ Wait for both to complete before proceeding.
 
 Launch one agent:
 
-- **Planner**: `Read /home/devuser/.claude/plugins/wills-plugins/plugins/wills-skills/commands/planner.md, ignore the YAML frontmatter, and follow the instructions in the body for this goal: $ARGUMENTS`
+- **Planner**: Agent tool with `subagent_type: "will-custom-skills:planner"`, prompt: `$ARGUMENTS`
 
 Wait for it to complete before proceeding.
 
@@ -42,7 +42,7 @@ Wait for it to complete before proceeding.
 
 Launch one agent:
 
-- **Reviewer**: `Read /home/devuser/.claude/plugins/wills-plugins/plugins/wills-skills/commands/reviewer.md, ignore the YAML frontmatter, and follow the instructions in the body.`
+- **Reviewer**: Agent tool with `subagent_type: "will-custom-skills:reviewer"`, no additional prompt needed — the agent reads the context files itself.
 
 Wait for it to complete before proceeding.
 
@@ -71,7 +71,10 @@ Read `claude-context-review.md` to get the full list of flaws. Combine those wit
 
 Launch one agent with the reviewer flaws and human corrections included directly in the prompt:
 
-- **Planner (revision)**: `Read /home/devuser/.claude/plugins/wills-plugins/plugins/wills-skills/commands/planner.md, ignore the YAML frontmatter, and follow the instructions in the body for this goal: $ARGUMENTS
+- **Planner (revision)**: Agent tool with `subagent_type: "will-custom-skills:planner"`, prompt:
+
+```
+$ARGUMENTS
 
 REVISION INSTRUCTIONS — you are revising an existing plan, not writing a new one. Read the current claude-context-plan.md first, then apply ONLY the following targeted corrections. Do not rewrite sections that were not flagged.
 
@@ -79,7 +82,8 @@ REVIEWER FLAWS TO FIX:
 [paste the full flaws list from claude-context-review.md verbatim here]
 
 HUMAN CORRECTIONS:
-[paste any corrections the user provided in Phase 4, or write "None" if the user had no additions]`
+[paste any corrections the user provided in Phase 4, or write "None" if the user had no additions]
+```
 
 Wait for it to complete before proceeding.
 
@@ -89,7 +93,7 @@ Wait for it to complete before proceeding.
 
 Launch one agent:
 
-- **Reviewer**: `Read /home/devuser/.claude/plugins/wills-plugins/plugins/wills-skills/commands/reviewer.md, ignore the YAML frontmatter, and follow the instructions in the body.`
+- **Reviewer**: Agent tool with `subagent_type: "will-custom-skills:reviewer"`, no additional prompt needed — the agent reads the context files itself.
 
 Wait for it to complete before proceeding.
 

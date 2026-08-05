@@ -1,0 +1,51 @@
+# Use the official Ubuntu 24.04 LTS image
+FROM ubuntu:24.04
+
+# Prevent interactive prompts during apt package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install essential system dependencies
+RUN apt-get clean && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    wget \
+    curl \
+    xz-utils \
+    git \
+    gh \
+    nodejs \
+    npm \
+    ca-certificates \
+    rsync \
+    && rm -rf /var/lib/apt/lists/*
+
+# Tell Git to trust all directories, and set a default sandbox identity
+RUN git config --global --add safe.directory '*' && \
+    git config --global user.name "Claude Sandbox" && \
+    git config --global user.email "claude@sandbox.local"
+   
+# Install code-server (Browser-based VS Code) globally
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+# Install Claude Code via npm globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Create the unprivileged user FIRST
+RUN useradd -m -s /bin/bash devuser
+
+# Pre-create necessary directories and assign ownership BEFORE switching users
+RUN mkdir -p /workspace /run/user/1000 && \
+    chown -R devuser:devuser /workspace /run/user/1000
+
+    # Switch to the unprivileged user for all subsequent commands
+USER devuser
+WORKDIR /home/devuser
+
+# Add Nix to the PATH for the rest of the build process
+ENV PATH="/home/devuser/.nix-profile/bin:${PATH}"
+
+# Set up the shared workspace directory
+WORKDIR /workspace
+
+# Default to bash
+CMD ["bash"]
