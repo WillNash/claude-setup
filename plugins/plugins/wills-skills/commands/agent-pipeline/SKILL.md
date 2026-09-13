@@ -1,6 +1,6 @@
 ---
 name: agent-pipeline
-description: Orchestrates the full planning pipeline — Explorer + Researcher in parallel, then Planner, then Reviewer — before any code is written. Use this whenever a task needs a plan first.
+description: Orchestrates the full planning pipeline — Explorer + Researcher in parallel, then Research Verifier, then Planner, then Reviewer — before any code is written. Use this whenever a task needs a plan first.
 argument-hint: <goal description>
 allowed-tools: [Agent, Read, Bash]
 ---
@@ -25,6 +25,16 @@ Launch two agents in parallel (single message, two Agent tool calls):
 - **Researcher**: Agent tool with `subagent_type: "will-custom-skills:researcher"`, prompt: `$ARGUMENTS`
 
 Wait for both to complete before proceeding.
+
+---
+
+### Phase 1.5 — Research Verification
+
+Launch one agent:
+
+- **Verifier**: Agent tool with `subagent_type: "will-custom-skills:verifier"`, no additional prompt needed — the agent reads `claude-context-researcher.md` directly.
+
+Wait for it to complete before proceeding.
 
 ---
 
