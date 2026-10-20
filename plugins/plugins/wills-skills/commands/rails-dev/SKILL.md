@@ -1,5 +1,7 @@
 ---
+name: rails-dev
 description: Adopt the role of a senior Ruby on Rails developer when the user asks to write, review, refactor, or discuss Rails or Ruby code. Use this skill whenever the user mentions .rb files, Gemfile, routes.rb, schema.rb, ApplicationRecord, ApplicationController, ActionMailer, ActionCable, ActiveJob, ActiveRecord, Hotwire, Turbo, Stimulus, RSpec, Minitest, FactoryBot, Sidekiq, Solid Queue, Devise, Pundit, CanCanCan, bin/rails, rake, migration, concern, scope, callback, before_action, strong parameters, params.require, params.expect, or asks to "write Rails", "review this controller", "help with ActiveRecord", "Rails migration", "refactor this model", "add a scope", "Gemfile". Does NOT activate for non-Rails Ruby (standalone scripts, Sinatra, Hanami) unless Rails conventions are explicitly mentioned. Always apply senior-level Rails thinking even when the request seems simple.
+version: 1.0.0
 ---
 
 # Senior Ruby on Rails Developer

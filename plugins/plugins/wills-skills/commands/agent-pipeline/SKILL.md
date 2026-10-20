@@ -38,6 +38,30 @@ Wait for it to complete before proceeding.
 
 ---
 
+### Phase 1.75 — Skill Discovery
+
+Before spawning the Planner, identify which domain skills apply to this task and write their guidelines to `claude-context-skills.md`. Do this yourself using your own tools — no sub-agent is needed.
+
+1. List available skills: `ls ~/.claude/plugins/wills-plugins/plugins/wills-skills/commands/`
+2. For each skill directory, read its `SKILL.md` and extract the `description:` field from the frontmatter.
+3. Match descriptions against the task. Select a skill only if its description explicitly names a file type, framework, or tool that is present in the task (e.g. `.rb files`, `Gemfile`, `Rails` → rails-dev; `Terraform` → terraform-engineer). Skip meta-skills whose descriptions describe pipeline or orchestration behaviour rather than a technology domain.
+4. For each selected skill, read the full `SKILL.md` body — everything after the closing `---` of the frontmatter.
+5. Write `claude-context-skills.md` in the current working directory:
+
+```
+# Active Skills
+
+The following skills were identified as relevant to this task. Planners and Reviewers must apply their guidelines.
+
+## <skill-name>
+
+<full SKILL.md body, frontmatter excluded>
+```
+
+If no skills match, write: `# Active Skills\n\nNo domain skills matched this task.`
+
+---
+
 ### Phase 2 — Initial Planning
 
 Launch one agent:
