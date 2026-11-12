@@ -21,7 +21,7 @@ services:
 
   claude-sandbox:
     image: ${SANDBOX_IMAGE:-claude-sandbox-image}
-    runtime: kata-runtime
+    runtime: runsc
     deploy:
       resources:
         limits:

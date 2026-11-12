@@ -30,35 +30,14 @@ docker exec -u devuser -it claude-setup-claude-sandbox-1 bash
 ### Optionally enter the named version
 docker exec -u devuser -it project-alpha-claude-sandbox-1 bash
 
-## Some notes on setting up KATA
+# 1. Install prerequisites
+sudo apt update && sudo apt install -y curl ca-certificates gnupg
 
-### install zstd
+# 2. Add gVisor's official signing key
+curl -fsSL https://gvisor.dev/archive.key | sudo gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg
 
-sudo apt update && sudo apt install zstd
+# 3. Add the repository to your APT sources
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main" | sudo tee /etc/apt/sources.list.d/gvisor.list
 
-### Install only the needed kata containers - this installs kata-runtime
-
-wget https://github.com/kata-containers/kata-containers/releases/download/3.30.0/kata-static-3.30.0-amd64.tar.zst
-
-sudo tar -xf kata-static-3.30.0-amd64.tar.zst -C /
-
-### Symlink them
-
-sudo ln -s /opt/kata/bin/kata-runtime /usr/local/bin/kata-runtime
-sudo ln -s /opt/kata/bin/containerd-shim-kata-v2 /usr/local/bin/containerd-shim-kata-v2
-
-### Tell docker about kata 
-
-modify /etc/docker/daemon.json
-{
-  "runtimes": {
-    "kata-runtime": {
-      "runtimeType": "io.containerd.kata.v2"
-    }
-  }
-}
-
-### restart docker
-
-sudo systemctl restart docker
-
+# 4. Install runsc
+sudo apt update && sudo apt install -y runsc
